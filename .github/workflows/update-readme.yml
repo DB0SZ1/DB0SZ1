@@ -1,0 +1,37 @@
+name: Update top repos
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # daily at midnight UTC
+  push:
+    branches: [main]
+  workflow_dispatch:        # manual trigger from Actions tab
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests
+
+      - name: Fetch top repos and patch README
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/update_repos.py
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet && echo "No changes." || \
+            (git add README.md && \
+             git commit -m "chore: auto-update top repos [skip ci]" && \
+             git push)
